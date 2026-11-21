@@ -9,7 +9,7 @@ Visual-only lip-reading pipeline built on [Auto-AVSR](https://github.com/mpc001/
 3. Auto-AVSR's test transform center-crops that to **88×88, converts it to grayscale**, and normalizes it (mean 0.421, std 0.165).
 4. The recognizer (3D-conv front end, Conformer encoder, CTC/attention decoder) reads only those raw pixels.
 
-Landmarks are used only to align and crop. No lip points or outlines go into the model. `render.py` shows that exact 88×88 grayscale input.
+Landmarks are used only to align and crop. No lip points or outlines go into the model. `render.py` shows that exact 88×88 grayscale input, the raw 0–255 values of an 8×8 lip patch, and the last 8 frames of the input sequence.
 
 ## Setup
 
