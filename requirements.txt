@@ -1,0 +1,11 @@
+torch
+torchvision
+pytorch-lightning
+sentencepiece
+mediapipe==0.10.14
+opencv-python
+scikit-image
+numpy
+faster-whisper
+pillow
+yt-dlp

@@ -1,0 +1,9 @@
+*.mp4
+*.wav
+*.npy
+*.pth
+*.jsonl
+data/
+out/
+__pycache__/
+.venv/
