@@ -9,3 +9,4 @@ numpy
 faster-whisper
 pillow
 yt-dlp
+jiwer

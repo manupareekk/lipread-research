@@ -1,6 +1,9 @@
 # speaker-adaptive-vsr
 
-Visual-only lip-reading pipeline built on [Auto-AVSR](https://github.com/mpc001/auto_avsr). It takes a talking-head video, finds clean single-speaker sentences, runs the visual speech recognizer with no audio, scores it against a Whisper reference transcript, and renders a side-by-side visualization.
+Speaker-adaptive visual speech recognition (lip reading with no audio), built on [Auto-AVSR](https://github.com/mpc001/auto_avsr).
+
+- **Pipeline:** take a talking-head video, find clean single-speaker sentences, run the visual speech recognizer, score it against a Whisper reference transcript, and render a side-by-side visualization.
+- **Speaker adaptation:** train a small LoRA adapter on a few minutes of one person's video, evaluate on a held-out video of that person, and swap adapters between speakers to check that each one is speaker-specific.
 
 ## What the model reads
 
@@ -35,7 +38,28 @@ python render.py data/segs.json data/hyps.jsonl out/demo.mp4 data/clips/<a>.mp4 
 
 `render.py` expects Inter fonts (`Inter-Regular`, `Inter-SemiBold`, `InterDisplay-SemiBold`) in `--font-dir`.
 
-## Measured results (untuned `vsr_lrs2lrs3vox2avsp` checkpoint, CPU)
+## Speaker adaptation
+
+```bash
+cd vsr
+# per speaker: crops from infer.py -> 96x96 mouth clips + lists (use different source videos for train/val/test)
+python export_crops.py data/segs.json data/clips --speaker alice --split train   # repeat for val, test
+python make_labels.py --auto-avsr ../auto_avsr alice bob carol                    # labels + 2/5/15/30/60-min train budgets
+python train_adapter.py --auto-avsr ../auto_avsr --ckpt <ckpt.pth> --mode lora_enc \
+    --train-file alice_train15m.csv --val-file alice_val.csv --out runs/alice_lora_enc_15m
+python eval_adapter.py --auto-avsr ../auto_avsr data/adapt/lists/alice_test.txt runs/alice.jsonl \
+    --ckpt <ckpt.pth> --adapter runs/alice_lora_enc_15m
+python swap_matrix.py --auto-avsr ../auto_avsr --ckpt <ckpt.pth> alice bob carol  # full grid + adapter swap test
+python wer_table.py runs/results/*.jsonl
+```
+
+- `peft.py` implements the adaptation modes: `lora_enc`, `lora`, `lora_dec`, `bitfit`, `frontend`, `full`, `full_eval`.
+- LoRA (r=8, alpha=16) wraps the q/k/v/out attention projections. `lora_enc` trains about 0.6M parameters (2.4 MB) and leaves the ~250M-parameter base model frozen.
+- BatchNorm running stats and dropout stay frozen during adaptation. Training them on a few minutes of data makes WER much worse.
+- Encoder-only LoRA carries the gain. Decoder-only LoRA does almost nothing.
+- Training uses Auto-AVSR's data module, which reads clips with `torchvision.io.read_video`. That needs PyAV < 14.
+
+## Zero-shot results (untuned `vsr_lrs2lrs3vox2avsp` checkpoint, CPU)
 
 | Speaker / source | Shot | Sentences | WER |
 |---|---|---|---|
